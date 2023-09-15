@@ -1,48 +1,51 @@
 package com.example.chartManager
 
-import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.viewModels
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
+import androidx.compose.material.Button
 import androidx.compose.material.Card
+import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Scaffold
+import androidx.compose.material.Text
 import androidx.compose.material.TopAppBar
-import androidx.compose.material.*
-import androidx.compose.material.SnackbarDefaults.backgroundColor
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.navigation.compose.rememberNavController
 import com.example.chartManager.ui.theme.Theme
+import kotlin.math.floor
 
 class StudyPrepareActivity : ComponentActivity() {
+    private val viewModel: ChartViewModel by viewModels {
+        ViewModelFactory((application as ChartApplication).repository)
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        viewModel.getDataFromQuestionId(intent.getFloatExtra("QUESTION_NUMBER", 1f))
+
         setContent {
-            Theme (
+            Theme(
                 darkTheme = false
             ) {
-                mainContent()
+                MainContent()
             }
         }
     }
 
     @Composable
-    private fun mainContent() {
-        val navController = rememberNavController()
+    private fun MainContent() {
         Scaffold(
             topBar = { TopBar() },
-        ) {padding ->
+        ) { padding ->
             val intent = intent
             Column(
                 modifier = Modifier.padding(padding)
@@ -61,8 +64,9 @@ class StudyPrepareActivity : ComponentActivity() {
                             horizontalArrangement = Arrangement.SpaceAround
                         ) {
                             Text(text = "問題番号:", fontSize = 20.sp)
+                            val questionNum = intent.getFloatExtra("QUESTION_NUMBER", 1f)
                             Text(
-                                intent.getIntExtra("QUESTION_NUMBER", 1).toString(),
+                                if (questionNum % floor(questionNum) == 0f) "${floor(questionNum).toInt()}(例題)" else "${floor(questionNum).toInt()}(練習)",
                                 fontSize = 20.sp
                             )
                         }
@@ -73,7 +77,13 @@ class StudyPrepareActivity : ComponentActivity() {
                             horizontalArrangement = Arrangement.SpaceAround
                         ) {
                             Text(text = "前回の終了時間:", fontSize = 20.sp)
-                            Text(text = "13:23", fontSize = 20.sp)
+                            val solvingTime = viewModel.record.value.time
+                            val minute = solvingTime / 60
+                            val second = solvingTime % 60
+                            Text(
+                                if (viewModel.record.value.id != -1) "${minute}:${second}" else "–:–(記録なし)",
+                                fontSize = 20.sp
+                            )
                         }
                     }
                 }
@@ -90,12 +100,12 @@ class StudyPrepareActivity : ComponentActivity() {
                 }
             }
         }
-        }
+    }
 
     @Composable
     private fun TopBar() {
         TopAppBar(
-            title = { androidx.compose.material.Text(text = "チャート支援") }, // タイトルを指定
+            title = { Text(text = "チャート支援") }, // タイトルを指定
         )
     }
 }

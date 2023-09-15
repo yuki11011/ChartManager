@@ -4,14 +4,21 @@ import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.viewModels
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.BottomAppBar
 import androidx.compose.material.BottomNavigation
 import androidx.compose.material.BottomNavigationItem
 import androidx.compose.material.Button
+import androidx.compose.material.Card
+import androidx.compose.material.Colors
 import androidx.compose.material.Divider
 import androidx.compose.material.Icon
 import androidx.compose.material.MaterialTheme
@@ -29,35 +36,50 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavHostController
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import androidx.navigation.compose.*
 import com.example.chartManager.ui.theme.Theme
+import kotlin.math.floor
 
 class MainActivity : ComponentActivity() {
+    private val viewModel: ChartViewModel by viewModels {
+        ViewModelFactory((application as ChartApplication).repository)
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        viewModel.getLatestId()
+        viewModel.getHistory(10)
+
         setContent {
-            Theme (
+            Theme(
                 darkTheme = false
             ) {
-                mainContent()
+                MainContent()
             }
         }
     }
 
     @Composable
-    private fun mainContent() {
+    private fun MainContent() {
         val navController = rememberNavController()
         Scaffold(
             topBar = { TopBar() },
             bottomBar = { BottomBar(navController) }
-        ) {padding->
-            NavHost(navController = navController, startDestination = "study", modifier = Modifier.padding(padding)) {
+        ) { padding ->
+            NavHost(
+                navController = navController,
+                startDestination = "study",
+                modifier = Modifier.padding(padding)
+            ) {
                 composable("study") { Study() }
                 composable("review") { Review() }
                 composable("record") { Record() }
@@ -73,15 +95,20 @@ class MainActivity : ComponentActivity() {
             Button(
                 onClick = {
                     val intent = Intent(this@MainActivity, StudyPrepareActivity::class.java)
-                    intent.putExtra("QUESTION_NUMBER", questionNumber.value.toInt())
+                    intent.putExtra("QUESTION_NUMBER", viewModel.latestId.value)
                     startActivity(intent)
                 },
                 modifier = Modifier
                     .padding()
                     .padding(24.dp)
                     .fillMaxWidth(),
-                ) {
-                Text("${questionNumber.value}番から学習を始める")
+            ) {
+                if (viewModel.latestId.value % floor(viewModel.latestId.value) == 0f) {
+                    Text("${floor(viewModel.latestId.value).toInt()}番の例題から学習を始める")
+
+                } else {
+                    Text("${floor(viewModel.latestId.value).toInt()}番の練習から学習を始める")
+                }
             }
             Divider()
             Text("または以下のページから学習を始める")
@@ -90,12 +117,12 @@ class MainActivity : ComponentActivity() {
                 onValueChange = {
                     questionNumber.value = it
                     state.value = questionNumber.value.isNotEmpty()
-                                },
+                },
                 singleLine = true,
                 modifier = Modifier
                     .padding(20.dp)
                     .fillMaxWidth(),
-                label = {Text("問題番号を入力(練習問題は+1)")},
+                label = { Text("問題番号を入力(練習問題は.1)") },
                 colors = TextFieldDefaults.outlinedTextFieldColors(
                     focusedBorderColor = MaterialTheme.colors.secondary,
                     focusedLabelColor = MaterialTheme.colors.secondary,
@@ -106,7 +133,7 @@ class MainActivity : ComponentActivity() {
             Button(
                 onClick = {
                     val intent = Intent(this@MainActivity, StudyPrepareActivity::class.java)
-                    intent.putExtra("QUESTION_NUMBER", questionNumber.value.toInt())
+                    intent.putExtra("QUESTION_NUMBER", questionNumber.value.toFloat())
                     startActivity(intent)
                 },
                 modifier = Modifier
@@ -114,7 +141,7 @@ class MainActivity : ComponentActivity() {
                     .padding(24.dp)
                     .fillMaxWidth(),
                 enabled = state.value
-                ) {
+            ) {
                 Text("学習を始める")
             }
         }
@@ -127,7 +154,41 @@ class MainActivity : ComponentActivity() {
     }
 
     @Composable
-    private fun Record() {}
+    private fun Record() {
+        val history = viewModel.history
+        Column {
+            Text("履歴")
+            Card(
+                backgroundColor = Color(0xFFEEEEEE),
+                modifier = Modifier.padding(10.dp)
+            ) {
+                Column {
+                    LazyColumn {
+                        items(history) { history ->
+                            Row(
+                                modifier = Modifier
+                                    .padding(8.dp)
+                                    .fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceAround
+                            ) {
+                                val id = history.question_id
+                                Text(
+                                    if (id % floor(id) == 0f) "${floor(id).toInt()}(例題)" else "${
+                                        floor(
+                                            id
+                                        ).toInt()
+                                    }(練習)"
+                                )
+                                Text(history.date.toString())
+                                Text(history.time.toString())
+                            }
+                            Divider()
+                        }
+                    }
+                }
+            }
+        }
+    }
 
     @Composable
     private fun TopBar() {
@@ -140,9 +201,8 @@ class MainActivity : ComponentActivity() {
     private fun BottomBar(navController: NavHostController) {
         val navBackStackEntry by navController.currentBackStackEntryAsState()
         val currentDestination = navBackStackEntry?.destination
-        BottomAppBar(
-        ) {
-            BottomNavigation() {
+        BottomAppBar {
+            BottomNavigation {
                 BottomNavigationItem(
                     selected = currentDestination?.hierarchy?.any { it.route == "study" } == true,
                     onClick = { navController.navigate("study") },
@@ -180,6 +240,5 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    private val questionNumber = mutableStateOf("1")
-
+    private val questionNumber = mutableStateOf("")
 }
