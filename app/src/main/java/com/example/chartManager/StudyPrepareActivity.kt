@@ -1,5 +1,6 @@
 package com.example.chartManager
 
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -31,7 +32,6 @@ class StudyPrepareActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         viewModel.getDataFromQuestionId(intent.getFloatExtra("QUESTION_NUMBER", 1f))
-
         setContent {
             Theme(
                 darkTheme = false
@@ -89,7 +89,9 @@ class StudyPrepareActivity : ComponentActivity() {
                 }
                 Button(
                     onClick = {
-
+                        val studyIntent = Intent(this@StudyPrepareActivity, StudyActivity::class.java)
+                        studyIntent.putExtra("QUESTION_NUMBER", intent.getFloatExtra("QUESTION_NUMBER", 1f))
+                        startActivity(studyIntent)
                     },
                     modifier = Modifier
                         .padding()

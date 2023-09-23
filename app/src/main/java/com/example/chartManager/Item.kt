@@ -2,13 +2,9 @@ package com.example.chartManager
 
 import android.content.Context
 import androidx.room.*
-import androidx.room.RoomDatabase
 import androidx.sqlite.db.SupportSQLiteDatabase
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
-import java.sql.Time
-import java.text.SimpleDateFormat
-import java.time.LocalDate
 
 @Entity(tableName = "records")
 data class Record(
@@ -16,14 +12,20 @@ data class Record(
     val id: Int,
     val question_id: Float,
     val date: Long,
-    val time: Int
+    val time: Int,
+    @ColumnInfo(defaultValue = "0")
+    val evaluation: Byte,
+    @ColumnInfo(defaultValue = "0")
+    val isReviewed: Byte,
+    @ColumnInfo(defaultValue = "0")
+    val studyCount: Int
 ) {
     data class QuestionIdAndTime(
         val question_id: Float, val time: String
     )
 }
 
-@Database(entities = [Record::class], version = 3, exportSchema = false)
+@Database(entities = [Record::class], version = 7, exportSchema = false)
 abstract class ItemDatabase : RoomDatabase() {
 
     abstract fun itemDao(): ItemDao
@@ -62,6 +64,7 @@ abstract class ItemDatabase : RoomDatabase() {
                     "item_database"
                 )
                     .addCallback(WordDatabaseCallback(scope))
+                    .fallbackToDestructiveMigration()
                     .build()
                 INSTANCE = instance
                 // return instance
@@ -74,7 +77,7 @@ abstract class ItemDatabase : RoomDatabase() {
 @Dao
 interface ItemDao {
     //for cumulative data
-    @Query("SELECT * FROM records WHERE question_id = :id ORDER BY date DESC")
+    @Query("SELECT * FROM records WHERE ROUND(question_id, 1) = ROUND(:id, 1) ORDER BY date DESC")
     suspend fun getDataFromQuestionId(id: Float): List<Record>
 
     @Query("DELETE FROM records WHERE id = :id")
@@ -89,6 +92,14 @@ interface ItemDao {
     @Query("SELECT question_id, time FROM records WHERE date = (SELECT MAX(date) FROM records)")
     fun getLatestId(): Record.QuestionIdAndTime
 
-    @Query("SELECT * FROM records ORDER BY date ASC LIMIT :numRecords")
+    @Query("SELECT * FROM records ORDER BY date DESC LIMIT :numRecords")
     fun getHistory(numRecords: Int): List<Record>
+
+    @Query("""
+        SELECT * FROM (
+            SELECT id, question_id, MAX(date) AS date, time, evaluation, isReviewed, studyCount FROM records WHERE :minDate <= date <= :maxDate and isReviewed == 0 GROUP BY question_id
+        )
+        ORDER BY date DESC
+        """)
+    suspend fun getReview(minDate: Long, maxDate:Long): List<Record>
 }

@@ -1,7 +1,6 @@
+
 import androidx.annotation.WorkerThread
-import androidx.compose.runtime.mutableStateOf
 import com.example.chartManager.ItemDao
-import com.example.chartManager.MainActivity
 import com.example.chartManager.Record
 
 class Repository(private val itemDao: ItemDao) {
@@ -25,10 +24,17 @@ class Repository(private val itemDao: ItemDao) {
 
     @Suppress("RedundantSuspendModifier")
     @WorkerThread
-    suspend fun getHistory(numRecords:Int): List<Record>? {
+    suspend fun getHistory(numRecords: Int): List<Record>? {
         if (itemDao.getHistory(numRecords) != null) {
             return itemDao.getHistory(numRecords)
         }
         return null
     }
+
+    @Suppress("RedundantSuspendModifier")
+    @WorkerThread
+    suspend fun getReview(minDate: Long, maxDate: Long):List<Record> {
+        return itemDao.getReview(minDate, maxDate)
+    }
+
 }

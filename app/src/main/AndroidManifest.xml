@@ -2,6 +2,9 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
     <application
         android:name=".ChartApplication"
         android:allowBackup="true"
@@ -13,6 +16,21 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.チャート支援"
         tools:targetApi="33">
+        <receiver
+            android:name=".StudyActivity$StudyBroadCastReceiver"
+            android:enabled="true"
+            android:exported="false"></receiver>
+
+        <service
+            android:name=".StudyRecordForegroundService"
+            android:enabled="true"
+            android:exported="false" />
+
+        <activity
+            android:name=".StudyActivity"
+            android:exported="false"
+            android:label="@string/title_activity_study"
+            android:theme="@style/Theme.チャート支援" />
         <activity
             android:name=".StudyPrepareActivity"
             android:exported="false"
@@ -30,4 +48,5 @@
             </intent-filter>
         </activity>
     </application>
+
 </manifest>
